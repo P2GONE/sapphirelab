@@ -75,10 +75,13 @@ class ImagePacketFuzzer:
             return True
         try:
             data = json.loads(response_text)
-            code = data.get('error', {}).get('code', 0) if isinstance(data, dict) else 0
-            return code == 429
+            if isinstance(data, dict):
+                error_obj = data.get('error', {})
+                code = error_obj.get('code', 0) if isinstance(error_obj, dict) else 0
+                return code == 429
         except (json.JSONDecodeError, TypeError):
-            return False
+            pass
+        return False
 
     def _extract_response_text(self, response_text):
         try:
