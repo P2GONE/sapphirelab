@@ -31,24 +31,28 @@
 ```
 실행 모드 선택
 │
-├── ./run.sh                              → 기존 .atk 공격 실행
-├── ./run.sh harmbench                    → HarmBench 데이터셋 직접 전송
-├── ./run.sh packet <file> [url] [limit]  → Burp Suite 패킷 기반 퍼징
-│                                               │
-│                                               ├── [Mutation OFF] 행동 → 패킷 전송
-│                                               │
-│                                               └── [Mutation ON]
-│                                                     GPTFuzz 시드 선택
-│                                                     → LLM으로 템플릿 변형
-│                                                     → [INSERT PROMPT HERE] 교체
-│                                                     → 패킷 전송
-│                                                     → REFUSED? → retry mutator로 재변형
-│                                                     → 최대 MaxRetries 반복
-│                                                     → session_*.json 저장
+├── ./run.sh text attacks                                   → 기존 .atk 공격 실행
+├── ./run.sh text harmbench                                 → HarmBench 데이터셋 직접 전송
+├── ./run.sh text packet <file> [url] [--limit N]           → Burp Suite 패킷 기반 퍼징
+│                                                                 │
+│                                                                 ├── [Mutation OFF] 행동 → 패킷 전송
+│                                                                 │                       → session_*.json 저장
+│                                                                 └── [Mutation ON]
+│                                                                       GPTFuzz 시드 선택
+│                                                                       → LLM으로 템플릿 변형
+│                                                                       → [INSERT PROMPT HERE] 교체
+│                                                                       → 패킷 전송
+│                                                                       → REFUSED? → retry mutator로 재변형
+│                                                                       → 최대 MaxRetries 반복
+│                                                                       → session_*.json 저장
 │
-└── ./run.sh resume <session.json> [url] [limit]  → 실패한 행동만 재실행
-                                                        mutation 강제 활성화
-                                                        → session_*.json 저장
+├── ./run.sh text resume <session.json> [url] [--limit N]   → 실패한 행동만 재실행
+│                                                                 mutation 강제 활성화
+│                                                                 → session_*.json 저장
+│
+├── ./run.sh image [--strategies ...] [--payloads ...]       → 이미지 멀티모달 퍼징
+│
+└── ./run.sh all                                             → text(harmbench) + image 전체 실행
 ```
 
 ---
@@ -132,33 +136,33 @@ pip install google-genai  # Gemini mutation 사용 시
 ### 기본 실행 (기존 .atk 공격)
 
 ```bash
-./run.sh
+./run.sh text attacks
 ```
 
 ### HarmBench 데이터셋 퍼징
 
 ```bash
-./run.sh harmbench
+./run.sh text harmbench
 ```
 
 ### Burp Suite 패킷 퍼징
 
 1. Burp Suite에서 요청 캡처
-2. 페이로드 위치를 `AAAAAAAAAAAAAAAAAAA`로 교체 후 `packet.txt`로 저장
+2. 페이로드 위치를 `AAAAAAAAAAAAAAAAAAA`로 교체 후 `burp_packet.txt`로 저장
 3. 실행:
 
 ```bash
 # 기본 실행 (패킷 파일의 Host 사용)
-./run.sh packet packet.txt
+./run.sh text packet burp_packet.txt
 
 # 타겟 URL 직접 지정
-./run.sh packet packet.txt https://target.ngrok-free.app/api/chat
+./run.sh text packet burp_packet.txt https://target.ngrok-free.app/api/chat
 
 # 개수 제한 (처음 50개만)
-./run.sh packet packet.txt https://target.ngrok-free.app/api/chat 50
+./run.sh text packet burp_packet.txt https://target.ngrok-free.app/api/chat --limit 50
 
 # mutation + Gemini
-GEMINI_API_KEY=AIza... ./run.sh packet packet.txt https://target.ngrok-free.app/api/chat 50
+GEMINI_API_KEY=AIza... ./run.sh text packet burp_packet.txt https://target.ngrok-free.app/api/chat --limit 50
 ```
 
 ### Resume (실패한 것만 재실행)
@@ -168,17 +172,17 @@ GEMINI_API_KEY=AIza... ./run.sh packet packet.txt https://target.ngrok-free.app/
 
 ```bash
 # 실패한 것 전부 재실행 (mutation 자동 활성화)
-GEMINI_API_KEY=AIza... ./run.sh resume session_20250426_143022.json https://target.ngrok-free.app/api/chat
+GEMINI_API_KEY=AIza... ./run.sh text resume session_20250426_143022.json https://target.ngrok-free.app/api/chat
 
 # 실패한 것 중 30개만 재실행
-GEMINI_API_KEY=AIza... ./run.sh resume session_20250426_143022.json https://target.ngrok-free.app/api/chat 30
+GEMINI_API_KEY=AIza... ./run.sh text resume session_20250426_143022.json https://target.ngrok-free.app/api/chat --limit 30
 ```
 
-> resume 모드는 `llmfuzzer.cfg`의 `Mutation.Enabled` 설정과 무관하게 **항상 mutation이 강제 활성화**됩니다.
+> resume 모드는 `fuzzer.cfg`의 `Mutation.Enabled` 설정과 무관하게 **항상 mutation이 강제 활성화**됩니다.
 
 ### Mutation + Retry 활성화
 
-`llmfuzzer.cfg`에서 설정:
+`fuzzer.cfg`에서 설정:
 
 ```yaml
 Mutation:
@@ -234,7 +238,7 @@ GEMINI_API_KEY=AIza... ./run.sh packet burp_request.txt
 
 ---
 
-## 설정 파일 (`llmfuzzer.cfg`)
+## 설정 파일 (`fuzzer.cfg`)
 
 ```yaml
 PacketFuzz:

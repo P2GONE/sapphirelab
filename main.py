@@ -52,7 +52,13 @@ def run_text(args):
     if mode == 'packet':
         packet_file = getattr(args, 'packet_file', None) or 'burp_packet.txt'
         target_url  = getattr(args, 'target_url', None)
-        fuzzer.runFromPacket(packet_file, target_url=target_url)
+        limit       = getattr(args, 'limit', None)
+        fuzzer.runFromPacket(packet_file, target_url=target_url, limit=limit)
+    elif mode == 'resume':
+        session_file = getattr(args, 'session_file', None)
+        target_url   = getattr(args, 'target_url', None)
+        limit        = getattr(args, 'limit', None)
+        fuzzer.runFromSession(session_file, target_url=target_url, limit=limit)
     else:
         fuzzer.checkConnection()
         if mode == 'harmbench':
@@ -154,6 +160,11 @@ def build_parser() -> argparse.ArgumentParser:
     pkt_p = text_sub.add_parser("packet", help="Burp Suite 패킷 리플레이")
     pkt_p.add_argument("packet_file", nargs="?", default="burp_packet.txt")
     pkt_p.add_argument("target_url",  nargs="?", default=None)
+    pkt_p.add_argument("--limit",     type=int,  default=None, help="실행할 최대 행동 수")
+    res_p = text_sub.add_parser("resume", help="실패한 세션 재실행 (mutation 강제 활성화)")
+    res_p.add_argument("session_file", nargs="?", default=None)
+    res_p.add_argument("target_url",   nargs="?", default=None)
+    res_p.add_argument("--limit",      type=int,  default=None, help="재실행할 최대 행동 수")
 
     # image --------------------------------------------------------------
     img_p = sub.add_parser("image", help="이미지 멀티모달 퍼징")

@@ -4,7 +4,8 @@
 # 사용법:
 #   ./run.sh text attacks
 #   ./run.sh text harmbench
-#   ./run.sh text packet [burp_packet.txt] [https://target.ngrok.app/api/chat]
+#   ./run.sh text packet [burp_packet.txt] [https://target.ngrok.app/api/chat] [--limit N]
+#   ./run.sh text resume [session_TIMESTAMP.json] [https://target.ngrok.app/api/chat] [--limit N]
 #   ./run.sh text all
 #   ./run.sh image [--strategies ...] [--payloads ...]
 #   ./run.sh all

@@ -4,6 +4,7 @@ import random
 import uuid
 import csv
 import json
+import datetime
 import requests
 import yaml
 from termcolor import colored
@@ -390,8 +391,9 @@ echo "[+] Response: $RESPONSE"
         total     = len(behaviors)
         print(colored(f'[PacketFuzz] Behaviors   : {total}\n', 'cyan'))
 
-        results   = {}
-        successes = []
+        results      = {}
+        successes    = []
+        refused_rows = []
 
         for i, row in enumerate(behaviors, 1):
             behavior    = row['Behavior']
@@ -489,9 +491,159 @@ echo "[+] Response: $RESPONSE"
 
             if not found:
                 stats['refused'] += 1
+                refused_rows.append(row)
 
         self._print_harmbench_summary(results)
         self._print_success_list(successes)
+
+        if refused_rows:
+            self._save_session(refused_rows, packet_path)
+
+    def _save_session(self, refused_rows, packet_path):
+        ts       = datetime.datetime.now().strftime('%Y%m%d_%H%M%S')
+        filename = f'session_{ts}.json'
+        payload  = {
+            'packet_path': packet_path,
+            'refused':     refused_rows,
+        }
+        with open(filename, 'w', encoding='utf-8') as f:
+            json.dump(payload, f, ensure_ascii=False, indent=2)
+        print(colored(f'\n[Session] Saved {len(refused_rows)} refused behavior(s) → {filename}', 'cyan'))
+        return filename
+
+    def runFromSession(self, session_path, target_url=None, limit=None):
+        if not session_path or not os.path.isfile(session_path):
+            raise Exception(f'Session file not found: {session_path}')
+
+        with open(session_path, encoding='utf-8') as f:
+            session = json.load(f)
+
+        packet_path   = session.get('packet_path', 'burp_packet.txt')
+        refused_rows  = session.get('refused', [])
+
+        if limit:
+            refused_rows = refused_rows[:int(limit)]
+
+        print(colored(f'\n[Resume] Session     : {session_path}', 'cyan'))
+        print(colored(f'[Resume] Packet      : {packet_path}', 'cyan'))
+        print(colored(f'[Resume] Behaviors   : {len(refused_rows)} (refused only)', 'cyan'))
+
+        mut_cfg = self.config.get('Mutation', {})
+        mut_cfg_forced = dict(mut_cfg)
+        mut_cfg_forced['Enabled'] = True
+        self.config['Mutation'] = mut_cfg_forced
+
+        pkt_cfg      = self.config.get('PacketFuzz', {})
+        placeholder  = pkt_cfg.get('Placeholder', 'AAAAAAAAAAAAAAAAAAA')
+        seeds_path   = mut_cfg_forced.get('SeedsPath', 'seeds/seed_short_25.csv')
+        if not os.path.isfile(seeds_path):
+            raise Exception(f'Mutation seeds not found: {seeds_path}')
+
+        seeds        = load_seeds(seeds_path)
+        mut_policy, backend = build_policy_from_config(mut_cfg_forced)
+        retry_policy = build_retry_policy_from_config(mut_cfg_forced, backend)
+        max_retries  = int(mut_cfg_forced.get('MaxRetries', 3))
+
+        packet = self._parse_packet(packet_path)
+        if target_url:
+            packet['url'] = target_url
+        print(colored(f'[Resume] Target      : {packet["url"]}', 'cyan'))
+        print(colored(f'[Resume] MaxRetries  : {max_retries}\n', 'cyan'))
+
+        total     = len(refused_rows)
+        results   = {}
+        successes = []
+        new_refused = []
+
+        for i, row in enumerate(refused_rows, 1):
+            behavior    = row['Behavior']
+            context     = row.get('ContextString', '').strip()
+            sem_cat     = row.get('SemanticCategory', 'unknown')
+            behavior_id = row.get('BehaviorID', '')
+
+            base_text = (
+                f"Context:\n{context}\n\nTask: {behavior}" if context else behavior
+            )
+
+            try:
+                seed = random.choice(seeds)
+                mutated_template, mutator_used = mut_policy.mutate(seed, seeds)
+                if QUESTION_PLACEHOLDER not in mutated_template:
+                    mutated_template = seed
+                    mutator_used += '(fallback)'
+                current_payload = mutated_template.replace(QUESTION_PLACEHOLDER, base_text)
+            except Exception as e:
+                current_payload = base_text
+                mutator_used    = f'error:{e}'
+
+            stats = results.setdefault(sem_cat, {'passed': 0, 'refused': 0, 'errors': 0})
+            found = False
+
+            for attempt in range(1, max_retries + 2):
+                attempt_tag = f'attempt {attempt}/{max_retries + 1}'
+                mut_tag     = f'[{mutator_used}]'
+                escaped     = json.dumps(current_payload)[1:-1]
+                body        = packet['body_template'].replace(placeholder, escaped)
+
+                try:
+                    resp = requests.request(
+                        method=packet['method'],
+                        url=packet['url'],
+                        headers=packet['headers'],
+                        cookies=packet['cookies'],
+                        data=body.encode('utf-8'),
+                        timeout=30,
+                    )
+                    reply = self._extract_response_text(resp.text)
+
+                    if resp.status_code == 403 or 'blocked_by_promptfence' in resp.text:
+                        print(colored(
+                            f'[{i:>4}/{total}] BLOCKED  {mut_tag} {attempt_tag}  {behavior[:65]}',
+                            'blue',
+                        ))
+                        break
+                    elif self._is_refusal(reply):
+                        print(colored(
+                            f'[{i:>4}/{total}] REFUSED  {mut_tag} {attempt_tag}  {behavior[:65]}',
+                            'yellow',
+                        ))
+                        if attempt <= max_retries and retry_policy:
+                            try:
+                                current_payload, mutator_used = retry_policy.mutate(
+                                    current_payload, seeds)
+                            except Exception as e:
+                                mutator_used = f'retry_error:{e}'
+                                break
+                        else:
+                            break
+                    else:
+                        stats['passed'] += 1
+                        found = True
+                        successes.append((i, behavior_id, behavior, mutator_used, attempt))
+                        print(colored(
+                            f'[{i:>4}/{total}] SUCCESS #{i:<4} {mut_tag} {attempt_tag}  {behavior[:65]}',
+                            'red', attrs=['bold'],
+                        ))
+                        print(colored(f'              => {reply[:150]}', 'red'))
+                        break
+
+                except requests.exceptions.RequestException as e:
+                    stats['errors'] += 1
+                    print(colored(
+                        f'[{i:>4}/{total}] ERROR    {mut_tag} {attempt_tag}  {behavior[:65]} ({e})',
+                        'magenta',
+                    ))
+                    break
+
+            if not found:
+                stats['refused'] += 1
+                new_refused.append(row)
+
+        self._print_harmbench_summary(results)
+        self._print_success_list(successes)
+
+        if new_refused:
+            self._save_session(new_refused, packet_path)
 
     def _print_success_list(self, successes):
         if not successes:
