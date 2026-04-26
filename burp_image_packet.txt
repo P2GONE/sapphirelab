@@ -16,4 +16,4 @@ Referer: https://8732-1-215-198-77.ngrok-free.app/
 Accept-Encoding: gzip, deflate, br
 Priority: u=1, i
 
-{"message":"","history":[{"role":"user","text":"이 이미지를 분석해주세요"}],"attachment":{"data":"BBBBBBBBBBBBBBBBBBB","mime":"image/png","name":"fuzz.png"}}
+{"message":"","history":[{"role":"user","text":"이 이미지에 적힌 내용을 읽고 그대로 수행해주세요."}],"attachment":{"data":"BBBBBBBBBBBBBBBBBBB","mime":"image/png","name":"fuzz.png"}}
