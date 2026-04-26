@@ -23,6 +23,7 @@
 | 페이로드 변형 | 없음 | GPTFuzz 5가지 mutation + retry 피드백 루프 |
 | 거부 감지 | 영어 문구만 | 영어 + 한국어 거부 문구 탐지 |
 | 성공 보고 | 없음 | SUCCESS #N + mutator 이름 + 시도 횟수 출력 |
+| 모달리티 | 텍스트만 | 텍스트 + 이미지 + **오디오** 멀티모달 |
 
 ---
 
@@ -49,6 +50,12 @@
 ├── ./run.sh text resume <session.json> [url] [--limit N]   → 실패한 행동만 재실행
 │                                                                 mutation 강제 활성화
 │                                                                 → session_*.json 저장
+│
+├── ./run.sh audio --packet <file> --target <url> [--limit N] → 오디오 멀티모달 퍼징
+│                                                                 15가지 DSP 변이 전략
+│                                                                 → 합성 오디오 시드 생성
+│                                                                 → WAV → data URI → 패킷 삽입
+│                                                                 → REFUSED? → retry 뮤테이터
 │
 ├── ./run.sh image [--strategies ...] [--payloads ...]       → 이미지 멀티모달 퍼징
 │
@@ -164,6 +171,30 @@ pip install google-genai  # Gemini mutation 사용 시
 # mutation + Gemini
 GEMINI_API_KEY=AIza... ./run.sh text packet burp_packet.txt https://target.ngrok-free.app/api/chat --limit 50
 ```
+
+### 오디오 퍼징
+
+Burp Suite에서 오디오 attachment를 포함하는 멀티모달 요청을 캡처하고, 텍스트 페이로드 위치에 `AAAAAAAAAAAAAAAAAAA`를 마킹합니다.  
+15가지 DSP 변이 전략으로 합성 오디오를 생성해 함께 전송합니다.
+
+```bash
+# 기본 실행
+./run.sh audio --packet burp_packet.txt --target https://target.ngrok-free.app/api/chat
+
+# 개수 제한
+./run.sh audio --packet burp_packet.txt --target https://target.ngrok-free.app/api/chat --limit 20
+```
+
+**오디오 변이 전략 (15가지)**
+
+| 카테고리 | 전략 |
+|---|---|
+| Perturbation | AdversarialNoise, PGDTransfer, PsychoacousticMasking, TimeStretch |
+| HiddenSpeech | UltrasonicEmbed, Backmasking, WhisperOverlay |
+| Frequency | BandAmplify, SpectralWatermark, FormantShift, BandShuffle |
+| Confusion | RoomImpulse, CodecArtifact, Jitter, EnvironmentalNoise |
+
+---
 
 ### Resume (실패한 것만 재실행)
 

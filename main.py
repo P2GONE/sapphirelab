@@ -1,12 +1,14 @@
 """
 Multimodal Jailbreak Fuzzer
-쇼핑몰 멀티모달 챗봇 안전 정책 우회 테스트 — 텍스트/이미지 통합 퍼저
+쇼핑몰 멀티모달 챗봇 안전 정책 우회 테스트 — 텍스트/이미지/오디오 통합 퍼저
 
 사용법:
   python main.py text attacks                       # .atk 공격 파일 실행
   python main.py text harmbench                     # HarmBench 데이터셋 실행
   python main.py text packet [file] [target_url]    # Burp Suite 패킷 리플레이
   python main.py text all                           # attacks + harmbench
+
+  python main.py audio --packet burp_packet.txt --target https://target/api/chat
 
   python main.py image                              # 모든 페이로드 × 모든 전략
   python main.py image --strategies text_overlay_visible steganography_lsb
@@ -166,6 +168,12 @@ def build_parser() -> argparse.ArgumentParser:
     res_p.add_argument("target_url",   nargs="?", default=None)
     res_p.add_argument("--limit",      type=int,  default=None, help="재실행할 최대 행동 수")
 
+    # audio --------------------------------------------------------------
+    aud_p = sub.add_parser("audio", help="오디오 멀티모달 퍼징")
+    aud_p.add_argument("--packet",  type=str, default="burp_packet.txt", help="Burp 패킷 파일")
+    aud_p.add_argument("--target",  type=str, default=None, help="타겟 URL (패킷 Host 대신 사용)")
+    aud_p.add_argument("--limit",   type=int, default=None, help="실행할 최대 행동 수")
+
     # image --------------------------------------------------------------
     img_p = sub.add_parser("image", help="이미지 멀티모달 퍼징")
     img_p.add_argument("--image",      type=str,  default=None, help="베이스 이미지 경로")
@@ -194,6 +202,11 @@ async def main():
 
     if args.mode == "text":
         run_text(args)
+
+    elif args.mode == "audio":
+        from fuzzer.audio.engine import AudioLLMFuzzer
+        fuzzer = AudioLLMFuzzer("fuzzer.cfg")
+        fuzzer.runAudioPacket(args.packet, target_url=args.target, limit=args.limit)
 
     elif args.mode == "image":
         await run_image(args)
