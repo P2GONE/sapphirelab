@@ -135,6 +135,7 @@ class AudioLLMFuzzer:
 
         placeholder = audio_cfg.get('Placeholder',
                                     pkt_cfg.get('Placeholder', 'AAAAAAAAAAAAAAAAAAA'))
+        audio_placeholder = audio_cfg.get('AudioPlaceholder', 'BBBBBBBBBBBBBBBBBBB')
         dataset_path = audio_cfg.get('DatasetPath',
                         self.config.get('HarmBench', {}).get('DatasetPath',
                             'HarmBench/data/behavior_datasets/harmbench_behaviors_text_test.csv'))
@@ -153,11 +154,15 @@ class AudioLLMFuzzer:
         if target_url:
             packet['url'] = target_url
 
-        print(colored(f'\n[AudioFuzz] Packet   : {packet_path}', 'cyan'))
-        print(colored(f'[AudioFuzz] Target   : {packet["url"]}', 'cyan'))
-        print(colored(f'[AudioFuzz] Mutators : {len(mut_policy.mutators)}', 'cyan'))
-        print(colored(f'[AudioFuzz] Seeds    : {len(audio_seeds)} synthetic audio', 'cyan'))
-        print(colored(f'[AudioFuzz] MaxRetries: {max_retries}', 'cyan'))
+        has_audio_placeholder = audio_placeholder in open(packet_path, encoding='utf-8').read()
+
+        print(colored(f'\n[AudioFuzz] Packet        : {packet_path}', 'cyan'))
+        print(colored(f'[AudioFuzz] Target        : {packet["url"]}', 'cyan'))
+        print(colored(f'[AudioFuzz] TextPH        : {placeholder!r}', 'cyan'))
+        print(colored(f'[AudioFuzz] AudioPH       : {audio_placeholder!r} {"(found)" if has_audio_placeholder else "(NOT FOUND — injecting as attachment field)"}', 'cyan'))
+        print(colored(f'[AudioFuzz] Mutators      : {len(mut_policy.mutators)}', 'cyan'))
+        print(colored(f'[AudioFuzz] Seeds         : {len(audio_seeds)} synthetic audio', 'cyan'))
+        print(colored(f'[AudioFuzz] MaxRetries    : {max_retries}', 'cyan'))
 
         # -- 데이터셋 로드 --
         if os.path.isfile(dataset_path):
@@ -200,20 +205,27 @@ class AudioLLMFuzzer:
                 attempt_tag = f'attempt {attempt}/{max_retries + 1}'
                 mut_tag = f'[{mutator_used}]'
 
-                # body 구성: placeholder 교체 + attachment 삽입
-                escaped = json.dumps(base_text)[1:-1]
-                body_str = packet['body_template'].replace(placeholder, escaped)
-                try:
-                    body_json = json.loads(body_str)
-                except json.JSONDecodeError:
-                    body_json = {"message": base_text, "history": [{"role": "user", "text": "hi"}]}
+                # body 구성: 텍스트 placeholder → 행동 텍스트
+                escaped_text = json.dumps(base_text)[1:-1]
+                body_str = packet['body_template'].replace(placeholder, escaped_text)
 
-                body_json['attachment'] = {
-                    "data": wav_to_data_uri(current_audio),
-                    "mime": "audio/wav",
-                    "name": "fuzz_audio.wav",
-                }
-                body = json.dumps(body_json)
+                # 오디오 placeholder → mutated audio data URI
+                audio_data_uri = wav_to_data_uri(current_audio)
+                if has_audio_placeholder:
+                    body_str = body_str.replace(audio_placeholder, audio_data_uri)
+                    body = body_str
+                else:
+                    # placeholder 없으면 JSON에 attachment 필드 삽입 (fallback)
+                    try:
+                        body_json = json.loads(body_str)
+                    except json.JSONDecodeError:
+                        body_json = {"message": base_text, "history": []}
+                    body_json['attachment'] = {
+                        "data": audio_data_uri,
+                        "mime": "audio/wav",
+                        "name": "fuzz_audio.wav",
+                    }
+                    body = json.dumps(body_json)
 
                 try:
                     resp = requests.request(

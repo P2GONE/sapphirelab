@@ -174,16 +174,33 @@ GEMINI_API_KEY=AIza... ./run.sh text packet burp_packet.txt https://target.ngrok
 
 ### 오디오 퍼징
 
-Burp Suite에서 오디오 attachment를 포함하는 멀티모달 요청을 캡처하고, 텍스트 페이로드 위치에 `AAAAAAAAAAAAAAAAAAA`를 마킹합니다.  
-15가지 DSP 변이 전략으로 합성 오디오를 생성해 함께 전송합니다.
+텍스트 퍼징과 **별도의 패킷 파일**이 필요합니다. Burp Suite에서 오디오 요청을 캡처한 뒤 두 위치를 마킹합니다.
+
+**패킷 준비 (`burp_audio_packet.txt`)**
+
+1. Burp Suite에서 오디오 파일을 포함한 실제 요청 캡처
+2. 텍스트 입력 위치 → `AAAAAAAAAAAAAAAAAAA` 로 교체
+3. 오디오 base64 data 위치 → `BBBBBBBBBBBBBBBBBBB` 로 교체 후 저장
+
+```
+POST /api/chat HTTP/1.1
+Host: target.ngrok-free.app
+Content-Type: application/json
+
+{"message":"AAAAAAAAAAAAAAAAAAA","audio":"BBBBBBBBBBBBBBBBBBB","history":[]}
+```
+
+엔진이 `AAAAAAAAAAAAAAAAAAA` → 행동 텍스트, `BBBBBBBBBBBBBBBBBBB` → 변이된 오디오 data URI로 교체해 전송합니다.
 
 ```bash
 # 기본 실행
-./run.sh audio --packet burp_packet.txt --target https://target.ngrok-free.app/api/chat
+./run.sh audio --packet burp_audio_packet.txt --target https://target.ngrok-free.app/api/chat
 
 # 개수 제한
-./run.sh audio --packet burp_packet.txt --target https://target.ngrok-free.app/api/chat --limit 20
+./run.sh audio --packet burp_audio_packet.txt --target https://target.ngrok-free.app/api/chat --limit 20
 ```
+
+> `BBBBBBBBBBBBBBBBBBB` 마커가 패킷에 없으면 JSON에 `attachment` 필드를 자동으로 삽입합니다 (fallback).
 
 **오디오 변이 전략 (15가지)**
 
