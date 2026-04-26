@@ -1,0 +1,40 @@
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+*.egg-info/
+dist/
+build/
+.eggs/
+
+# 환경변수 (API 키 포함 — 절대 커밋 금지)
+.env
+
+# 가상환경
+venv/
+.venv/
+env/
+
+# 퍼저 출력물 (대용량 이미지 및 결과)
+output/
+results/
+
+# HarmBench 데이터셋 (별도 clone 필요)
+HarmBench/
+
+# GPTFuzz 시드 (별도 다운로드 필요)
+seeds/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+
+# OS
+.DS_Store
+Thumbs.db
+
+# PoC 스크립트 (자동 생성)
+poc_*.sh
