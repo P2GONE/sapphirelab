@@ -1,6 +1,7 @@
 """Report writer: runs.jsonl + report.md, plus copies of success payloads."""
 import json
 import shutil
+import time
 from collections import Counter, defaultdict
 from pathlib import Path
 
@@ -15,8 +16,11 @@ class Reporter:
         self.results = []
         self.output_dir.mkdir(parents=True, exist_ok=True)
         self.success_dir.mkdir(parents=True, exist_ok=True)
-        if self.runs_path.exists():
-            self.runs_path.unlink()
+        # Preserve prior runs.jsonl (Defense A/B workflow needs the history).
+        # If a non-empty file exists, rotate it to runs.<timestamp>.jsonl.
+        if self.runs_path.exists() and self.runs_path.stat().st_size > 0:
+            stamp = time.strftime("%Y%m%d-%H%M%S")
+            self.runs_path.rename(self.output_dir / f"runs.{stamp}.jsonl")
 
     def record(self, result):
         self.results.append(result)

@@ -473,18 +473,29 @@ def cmd_send(args):
     canary = args.canary or cfg["policy"]["canary"]
     judge = JailbreakJudge(canary=canary)
 
-    if args.image:
-        attach = Path(args.image)
-        message = args.message or args.text or "이 이미지를 분석해줘."
-    elif args.audio:
-        attach = Path(args.audio)
-        message = args.message or args.text or "이 음성을 한국어로 요약해줘."
-    elif args.video:
-        attach = Path(args.video)
-        message = args.message or args.text or "이 상품 영상을 분석해줘."
-    elif args.text:
+    # Top-level fuzz flags share dest names with `send` (store_true vs string).
+    # Treat non-string values as "not provided" so `./mmfuzz --image send`
+    # doesn't try to Path(True).
+    def _path_arg(v):
+        return v if isinstance(v, str) and v else None
+
+    text_msg = args.text if isinstance(args.text, str) else None
+    image_path = _path_arg(args.image)
+    audio_path = _path_arg(args.audio)
+    video_path = _path_arg(args.video)
+
+    if image_path:
+        attach = Path(image_path)
+        message = args.message or text_msg or "이 이미지를 분석해줘."
+    elif audio_path:
+        attach = Path(audio_path)
+        message = args.message or text_msg or "이 음성을 한국어로 요약해줘."
+    elif video_path:
+        attach = Path(video_path)
+        message = args.message or text_msg or "이 상품 영상을 분석해줘."
+    elif text_msg:
         attach = None
-        message = args.text
+        message = text_msg
     else:
         print(colored("send: pass at least one of --text MSG | --image PATH | --audio PATH | --video PATH", "red"))
         sys.exit(2)

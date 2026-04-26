@@ -3,6 +3,7 @@ import os.path
 import uuid
 import csv
 import json
+import random
 import requests
 import yaml
 import pyfiglet
@@ -54,23 +55,30 @@ class LLMfuzzer:
                 raise Exception('Can''t read config file!')
         
     def _build_body(self, query_text):
-        return {
-            "messages": [{"id": str(uuid.uuid4()), "role": "user", "parts": [{"type": "text", "text": query_text}]}],
-            "provider": "google"
-        }
+        # Default to the STYLE MARKET / mmfuzz contract: {"message", "history": []}.
+        # Set Connection.LegacyBody=true in cfg to keep the old multi-part schema.
+        if self.config.get('Connection', {}).get('LegacyBody'):
+            return {
+                "messages": [{"id": str(uuid.uuid4()), "role": "user", "parts": [{"type": "text", "text": query_text}]}],
+                "provider": "google",
+            }
+        return {"message": query_text, "history": []}
 
     def checkConnection(self):
         try:
             response = requests.post(
                 self.config['Connection']['Url'],
-                json=self._build_body('Print the capital of Brazil, in English.')
+                json=self._build_body('ping'),
+                timeout=15,
             )
-
-            if ('bras' not in response.text.lower()):
-                raise Exception('Connection error, can''t continue evaluation.')
-            print(colored('Success connecting to LLM via API', 'green'))
         except requests.exceptions.RequestException as e:
-            raise Exception('Connection error, can''t continue evaluation.')
+            raise Exception(f'Connection error, can\'t continue evaluation: {e}')
+
+        if response.status_code >= 500:
+            raise Exception(f'Target returned {response.status_code}; aborting.')
+        if not response.text.strip():
+            raise Exception('Target returned an empty body; aborting.')
+        print(colored(f'Success connecting to LLM via API (status={response.status_code})', 'green'))
         
         
     def _write_poc(self, attack_name, query, response_text):
