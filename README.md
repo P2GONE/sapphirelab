@@ -142,7 +142,14 @@ pip install anthropic   # mutation 사용 시
 3. 실행:
 
 ```bash
+# 패킷 파일의 Host를 그대로 사용
 ./run.sh packet burp_request.txt
+
+# 타겟 URL을 직접 지정 (패킷의 Host 무시)
+./run.sh packet burp_request.txt https://new-target.ngrok-free.app/api/chat
+
+# mutation + 타겟 URL 지정
+ANTHROPIC_API_KEY=sk-ant-... ./run.sh packet burp_request.txt https://new-target.ngrok-free.app/api/chat
 ```
 
 ### Mutation + Retry 활성화

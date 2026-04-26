@@ -340,7 +340,8 @@ echo "[+] Response: $RESPONSE"
         return response_text
 
     def runFromPacket(self, packet_path, placeholder=None, dataset_path=None,
-                      limit=None, semantic_filter=None, functional_filter=None):
+                      limit=None, semantic_filter=None, functional_filter=None,
+                      target_url=None):
         """Send HarmBench behaviors through a raw HTTP packet template."""
         pkt_cfg = self.config.get('PacketFuzz', {})
 
@@ -358,6 +359,8 @@ echo "[+] Response: $RESPONSE"
             functional_filter = pkt_cfg.get('FunctionalCategories')
 
         packet = self._parse_packet(packet_path)
+        if target_url:
+            packet['url'] = target_url
         print(colored(f'\n[PacketFuzz] Packet  : {packet_path}', 'cyan'))
         print(colored(f'[PacketFuzz] Target  : {packet["url"]}', 'cyan'))
         print(colored(f'[PacketFuzz] Placeholder: {placeholder!r}', 'cyan'))
