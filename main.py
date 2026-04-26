@@ -8,6 +8,9 @@ Multimodal Jailbreak Fuzzer
   python main.py text packet [file] [target_url]    # Burp Suite 패킷 리플레이
   python main.py text all                           # attacks + harmbench
 
+  python main.py audio                               # 오디오 퍼징 (Burp 패킷 기반)
+  python main.py audio --packet burp_packet.txt --target https://target/api/chat
+
   python main.py image                              # 모든 페이로드 × 모든 전략
   python main.py image --strategies text_overlay_visible steganography_lsb
   python main.py image --payloads DO-001 SE-001
@@ -164,6 +167,11 @@ def build_parser() -> argparse.ArgumentParser:
     img_p.add_argument("--no-save",    action="store_true")
     img_p.add_argument("--dry-run",    action="store_true")
 
+    # audio --------------------------------------------------------------
+    aud_p = sub.add_parser("audio", help="오디오 멀티모달 퍼징")
+    aud_p.add_argument("--packet",  type=str, default="burp_packet.txt", help="Burp 패킷 파일")
+    aud_p.add_argument("--target",  type=str, default=None, help="타겟 URL (패킷 Host 대신 사용)")
+
     # all ----------------------------------------------------------------
     all_p = sub.add_parser("all", help="harmbench(텍스트) + 이미지 전체 실행")
     all_p.add_argument("--image",      type=str,  default=None)
@@ -183,6 +191,11 @@ async def main():
 
     if args.mode == "text":
         run_text(args)
+
+    elif args.mode == "audio":
+        from fuzzer.audio.engine import AudioLLMFuzzer
+        fuzzer = AudioLLMFuzzer("fuzzer.cfg")
+        fuzzer.runAudioPacket(args.packet, target_url=args.target)
 
     elif args.mode == "image":
         await run_image(args)
