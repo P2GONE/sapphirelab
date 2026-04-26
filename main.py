@@ -170,12 +170,20 @@ def build_parser() -> argparse.ArgumentParser:
 
     # audio --------------------------------------------------------------
     aud_p = sub.add_parser("audio", help="오디오 멀티모달 퍼징")
-    aud_p.add_argument("--packet",  type=str, default="burp_packet.txt", help="Burp 패킷 파일")
+    aud_p.add_argument("--packet",  type=str, default="burp_audio_packet.txt", help="Burp 패킷 파일")
     aud_p.add_argument("--target",  type=str, default=None, help="타겟 URL (패킷 Host 대신 사용)")
     aud_p.add_argument("--limit",   type=int, default=None, help="실행할 최대 행동 수")
 
-    # image --------------------------------------------------------------
-    img_p = sub.add_parser("image", help="이미지 멀티모달 퍼징")
+    # image packet -------------------------------------------------------
+    imgpkt_p = sub.add_parser("image-packet", help="Burp 패킷 기반 이미지 멀티모달 퍼징")
+    imgpkt_p.add_argument("--packet",     type=str, default="burp_image_packet.txt", help="Burp 패킷 파일")
+    imgpkt_p.add_argument("--target",     type=str, default=None, help="타겟 URL")
+    imgpkt_p.add_argument("--limit",      type=int, default=None, help="실행할 최대 페이로드 수")
+    imgpkt_p.add_argument("--strategies", nargs="+", default=None, help="이미지 mutation 전략 목록")
+    imgpkt_p.add_argument("--image",      type=str, default=None, help="베이스 이미지 경로")
+
+    # image (Gemini) -----------------------------------------------------
+    img_p = sub.add_parser("image", help="이미지 멀티모달 퍼징 (Gemini API)")
     img_p.add_argument("--image",      type=str,  default=None, help="베이스 이미지 경로")
     img_p.add_argument("--strategies", nargs="+", default=None, help="뮤테이션 전략 목록")
     img_p.add_argument("--payloads",   nargs="+", default=None, help="페이로드 ID 목록")
@@ -207,6 +215,19 @@ async def main():
         from fuzzer.audio.engine import AudioLLMFuzzer
         fuzzer = AudioLLMFuzzer("fuzzer.cfg")
         fuzzer.runAudioPacket(args.packet, target_url=args.target, limit=args.limit)
+
+    elif args.mode == "image-packet":
+        from fuzzer.image.engine import ImagePacketFuzzer
+        strategies = None
+        if args.strategies:
+            from fuzzer.image.image_fuzzer import MutationStrategy
+            strategies = [MutationStrategy(s) for s in args.strategies]
+        fuzzer = ImagePacketFuzzer("fuzzer.cfg")
+        fuzzer.runImagePacket(
+            args.packet, target_url=args.target,
+            limit=args.limit, strategies=strategies,
+            base_image_path=args.image,
+        )
 
     elif args.mode == "image":
         await run_image(args)

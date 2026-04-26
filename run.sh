@@ -8,7 +8,8 @@
 #   ./run.sh text resume [session_TIMESTAMP.json] [https://target.ngrok.app/api/chat] [--limit N]
 #   ./run.sh text all
 #   ./run.sh audio --packet burp_audio_packet.txt --target https://target/api/chat [--limit N]
-#   ./run.sh image [--strategies ...] [--payloads ...]
+#   ./run.sh image-packet --packet burp_image_packet.txt --target https://target/api/chat [--limit N] [--strategies ...]
+#   ./run.sh image [--strategies ...] [--payloads ...]   # Gemini API 직접 테스트
 #   ./run.sh all
 #
 DIR="$(cd "$(dirname "$0")" && pwd)"

@@ -57,7 +57,12 @@
 │                                                                 → WAV → data URI → 패킷 삽입
 │                                                                 → REFUSED? → retry 뮤테이터
 │
-├── ./run.sh image [--strategies ...] [--payloads ...]       → 이미지 멀티모달 퍼징
+├── ./run.sh image-packet --packet <file> --target <url>      → Burp 패킷 기반 이미지 퍼징
+│                           [--limit N] [--strategies ...]       13가지 이미지 mutation 전략
+│                                                                 → 페이로드 텍스트 이미지에 삽입
+│                                                                 → BBBBBBBBBBBBBBBBBBB → image data URI
+│
+├── ./run.sh image [--strategies ...] [--payloads ...]       → 이미지 퍼징 (Gemini API 직접)
 │
 └── ./run.sh all                                             → text(harmbench) + image 전체 실행
 ```
