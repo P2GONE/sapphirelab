@@ -1,6 +1,7 @@
 """HTTP client that adapts a unified TestCase to JSON+dataurl or multipart contracts."""
 import base64
 import mimetypes
+import time
 from pathlib import Path
 
 import requests
@@ -8,6 +9,9 @@ import requests
 
 class TargetError(Exception):
     pass
+
+
+_RETRY_STATUS = {429, 502, 503, 504}
 
 
 def _data_url(path: Path):
@@ -41,15 +45,24 @@ class TargetClient:
 
     def send(self, message: str, attachment_path: Path = None, history=None):
         last_exc = None
-        for _ in range(self.retries + 1):
+        for attempt in range(self.retries + 1):
             try:
                 if self.contract == "json_dataurl":
-                    return self._send_json(message, attachment_path, history)
-                if self.contract == "multipart":
-                    return self._send_multipart(message, attachment_path)
-                raise TargetError(f"Unknown contract: {self.contract}")
+                    resp = self._send_json(message, attachment_path, history)
+                elif self.contract == "multipart":
+                    resp = self._send_multipart(message, attachment_path)
+                else:
+                    raise TargetError(f"Unknown contract: {self.contract}")
             except requests.RequestException as e:
                 last_exc = e
+                if attempt < self.retries:
+                    time.sleep(0.5 * (2 ** attempt))
+                continue
+
+            if resp["status"] in _RETRY_STATUS and attempt < self.retries:
+                time.sleep(0.5 * (2 ** attempt))
+                continue
+            return resp
         raise TargetError(f"Request failed: {last_exc}")
 
     def _send_json(self, message, attachment_path, history):
@@ -66,18 +79,13 @@ class TargetClient:
 
     def _send_multipart(self, message, attachment_path):
         data = {"message": message}
-        files = {}
         if attachment_path:
-            files["files"] = (Path(attachment_path).name, open(attachment_path, "rb"))
-        try:
-            resp = requests.post(self.url, data=data, files=files or None,
-                                 timeout=self.timeout)
-        finally:
-            for f in files.values():
-                try:
-                    f[1].close()
-                except Exception:
-                    pass
+            with open(attachment_path, "rb") as fh:
+                files = {"files": (Path(attachment_path).name, fh)}
+                resp = requests.post(self.url, data=data, files=files,
+                                     timeout=self.timeout)
+        else:
+            resp = requests.post(self.url, data=data, timeout=self.timeout)
         return self._extract(resp)
 
     def _extract(self, resp):

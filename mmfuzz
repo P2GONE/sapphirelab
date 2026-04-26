@@ -1,6 +1,8 @@
 #!/usr/bin/env bash
 # Convenience launcher for the multimodal jailbreak fuzzer.
-# Forwards every argument to mmfuzz.py with the script's dir on PYTHONPATH.
+# Forwards every argument to mmfuzz.py. Override the interpreter via $PYTHON
+# (e.g. PYTHON=./venv/bin/python ./mmfuzz ...).
 set -e
 DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-exec python3 "$DIR/mmfuzz.py" "$@"
+PY="${PYTHON:-python3}"
+exec "$PY" "$DIR/mmfuzz.py" "$@"
