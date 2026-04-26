@@ -1,6 +1,6 @@
 POST /api/chat HTTP/2
-Host: 8520-1-215-198-77.ngrok-free.app
-Cookie: abuse_interstitial=8520-1-215-198-77.ngrok-free.app
+Host: 8732-1-215-198-77.ngrok-free.app
+Cookie: abuse_interstitial=8732-1-215-198-77.ngrok-free.app
 Sec-Ch-Ua-Platform: "Windows"
 Accept-Language: ko-KR,ko;q=0.9
 Sec-Ch-Ua: "Chromium";v="143", "Not A(Brand";v="24"
@@ -8,11 +8,11 @@ Content-Type: application/json
 Sec-Ch-Ua-Mobile: ?0
 User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Safari/537.36
 Accept: */*
-Origin: https://8520-1-215-198-77.ngrok-free.app
+Origin: https://8732-1-215-198-77.ngrok-free.app
 Sec-Fetch-Site: same-origin
 Sec-Fetch-Mode: cors
 Sec-Fetch-Dest: empty
-Referer: https://8520-1-215-198-77.ngrok-free.app/
+Referer: https://8732-1-215-198-77.ngrok-free.app/
 Accept-Encoding: gzip, deflate, br
 Priority: u=1, i
 
