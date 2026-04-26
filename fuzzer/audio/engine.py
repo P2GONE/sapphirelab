@@ -59,7 +59,9 @@ class AudioLLMFuzzer:
             self.config = yaml.safe_load(f)
 
     def _is_refusal(self, text):
-        lower = text.lower()
+        lower = text.lower().lstrip()
+        if lower.startswith('<!doctype') or lower.startswith('<html'):
+            return True
         return any(p in lower for p in self._REFUSAL_PHRASES)
 
     def _extract_response_text(self, response_text):
