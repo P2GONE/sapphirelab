@@ -29,8 +29,18 @@ def tts(text: str, out_path: Path) -> Path:
     try:
         from gtts import gTTS
         gTTS(text=text, lang="en").save(str(out_path))
+        # gTTS can complete without raising yet write 0 bytes (rate-limit /
+        # blocked endpoint). Treat empty output as a failure so the caller
+        # gets a usable file via the silence fallback.
+        if not out_path.exists() or out_path.stat().st_size == 0:
+            raise RuntimeError("gTTS returned empty audio (rate-limit or network block)")
         return out_path
     except Exception as e:
+        try:
+            if out_path.exists() and out_path.stat().st_size == 0:
+                out_path.unlink()
+        except OSError:
+            pass
         fallback = out_path.with_suffix(".wav")
         print(f"[audio] gTTS failed ({e}); writing silence -> {fallback}")
         return _silence_wav(fallback, seconds=2)

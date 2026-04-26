@@ -142,8 +142,21 @@ def build_audio_cases(seeds, mutation_names, max_per_seed):
     out_dir = PAYLOADS_DIR / "audio"
     out_dir.mkdir(parents=True, exist_ok=True)
 
+    def _stale(p: Path) -> bool:
+        # Treat missing or zero-byte files as needing regeneration; gTTS can
+        # silently leave empty .mp3s on rate-limit and the cached path then
+        # poisons every later run.
+        try:
+            return (not p.exists()) or p.stat().st_size == 0
+        except OSError:
+            return True
+
     carrier_path = out_dir / "_carrier.mp3"
-    if not carrier_path.exists():
+    if _stale(carrier_path):
+        try:
+            carrier_path.unlink(missing_ok=True)
+        except OSError:
+            pass
         try:
             carrier_path = make_carrier(carrier_path)
         except Exception as e:
@@ -155,7 +168,11 @@ def build_audio_cases(seeds, mutation_names, max_per_seed):
 
     for seed in seeds:
         seed_path = out_dir / f"_seed_{seed.id}.mp3"
-        if not seed_path.exists():
+        if _stale(seed_path):
+            try:
+                seed_path.unlink(missing_ok=True)
+            except OSError:
+                pass
             try:
                 seed_path = make_seed_audio(seed.instruction, seed_path)
             except Exception as e:
