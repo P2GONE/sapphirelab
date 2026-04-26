@@ -1,0 +1,3 @@
+[submodule "HarmBench"]
+	path = HarmBench
+	url = https://github.com/centerforaisafety/HarmBench.git
