@@ -174,6 +174,8 @@ echo "[+] Response: $RESPONSE"
 
     def _is_refusal(self, text):
         lower = text.lower()
+        if lower.lstrip().startswith('<!doctype') or lower.lstrip().startswith('<html'):
+            return True
         return any(phrase in lower for phrase in self._REFUSAL_PHRASES)
 
     def runHarmBench(self, csv_path=None, semantic_filter=None, functional_filter=None, limit=None):

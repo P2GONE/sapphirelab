@@ -31,8 +31,17 @@ class LLMBackend:
             self.client = OpenAI(api_key=api_key or os.environ.get('OPENAI_API_KEY'))
             self.model = model or 'gpt-3.5-turbo'
 
+        elif provider == 'gemini':
+            try:
+                from google import genai
+            except ImportError:
+                raise ImportError("Run: pip install google-genai")
+            self.client = genai.Client(
+                api_key=api_key or os.environ.get('GEMINI_API_KEY'))
+            self.model = model or 'gemini-2.0-flash'
+
         else:
-            raise ValueError(f"Unknown provider: {provider!r}. Use 'anthropic' or 'openai'.")
+            raise ValueError(f"Unknown provider: {provider!r}. Use 'anthropic', 'openai', or 'gemini'.")
 
     def generate(self, prompt: str) -> str:
         if self.provider == 'anthropic':
@@ -52,6 +61,13 @@ class LLMBackend:
                 messages=[{"role": "user", "content": prompt}],
             )
             return resp.choices[0].message.content.strip()
+
+        elif self.provider == 'gemini':
+            resp = self.client.models.generate_content(
+                model=self.model,
+                contents=prompt,
+            )
+            return resp.text.strip()
 
 
 # ---------------------------------------------------------------------------

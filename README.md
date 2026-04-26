@@ -116,7 +116,8 @@ cd sapphirelab
 python -m venv venv
 source venv/bin/activate
 pip install -r requirements.txt
-pip install anthropic   # mutation 사용 시
+pip install anthropic   # Anthropic mutation 사용 시
+pip install google-genai  # Gemini mutation 사용 시
 ```
 
 ---
@@ -148,8 +149,11 @@ pip install anthropic   # mutation 사용 시
 # 타겟 URL을 직접 지정 (패킷의 Host 무시)
 ./run.sh packet burp_request.txt https://new-target.ngrok-free.app/api/chat
 
-# mutation + 타겟 URL 지정
+# mutation + 타겟 URL 지정 (Anthropic)
 ANTHROPIC_API_KEY=sk-ant-... ./run.sh packet burp_request.txt https://new-target.ngrok-free.app/api/chat
+
+# mutation + 타겟 URL 지정 (Gemini)
+GEMINI_API_KEY=AIza... ./run.sh packet burp_request.txt https://new-target.ngrok-free.app/api/chat
 ```
 
 ### Mutation + Retry 활성화
@@ -159,8 +163,8 @@ ANTHROPIC_API_KEY=sk-ant-... ./run.sh packet burp_request.txt https://new-target
 ```yaml
 Mutation:
   Enabled: true
-  Provider: anthropic          # anthropic | openai
-  Model: claude-haiku-4-5-20251001
+  Provider: gemini             # anthropic | openai | gemini
+  Model: gemini-2.0-flash      # gemini-2.0-flash / claude-haiku-4-5-20251001 / gpt-3.5-turbo
   MaxRetries: 3
   Strategies:
     - GenerateSimilar
@@ -177,7 +181,11 @@ Mutation:
 ```
 
 ```bash
+# Anthropic
 ANTHROPIC_API_KEY=sk-ant-... ./run.sh packet burp_request.txt
+
+# Gemini
+GEMINI_API_KEY=AIza... ./run.sh packet burp_request.txt
 ```
 
 ---
