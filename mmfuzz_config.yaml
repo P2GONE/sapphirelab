@@ -1,0 +1,56 @@
+%YAML 1.2
+---
+# Multimodal jailbreak fuzzer config
+
+target:
+  url: "http://localhost:5050/api/chat"
+  contract: "json_dataurl"   # json_dataurl | multipart
+  timeout_sec: 60
+  retries: 1
+
+policy:
+  canary: "INTERNAL_CANARY_SHOP_7F3A"   # must match CHATBOT_CANARY env var on target
+  role: "shopping assistant"
+
+fuzzing:
+  max_cases: 200
+  modalities: [text, image, audio, video]
+  max_iterations_per_seed: 4
+  parallel_workers: 4
+
+mutations:
+  text:
+    - word_shuffle
+    - spacing_mutation
+    - punctuation_insert
+    - text_split_lines
+  image:
+    - small_font
+    - overlay_on_carrier
+    - corner_placement
+    - low_contrast
+    - rotation
+    - patch_shuffle
+    - si_patch_shuffle
+  audio:
+    - volume_down
+    - speed_up
+    - slow_down
+    - pitch_shift
+    - noise_injection
+    - audio_split_segments
+    - background_mix
+  video:
+    - frame_overlay_text
+    - low_contrast_overlay
+    - corner_caption
+    - single_hidden_frame
+    - frame_shuffle
+    - audio_track_mix
+
+report:
+  output_dir: "reports/mm"
+  save_success_payloads: true
+  format: "markdown"
+
+seed: 42

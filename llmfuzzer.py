@@ -28,8 +28,8 @@ def printMotd():
     if os.name == 'nt':
         os.system('color')  # windows only
     print('Welcome to')
-    print(colored(pyfiglet.figlet_format("LLM Fuzzer", font='starwars', justify='left', width=180), 'green'))   
-    print(colored('### Warning: Use this LLM Fuzzer on your own LLM integrations!', 'red'))
+    print(colored(pyfiglet.figlet_format("MM Fuzzer", font='starwars', justify='left', width=180), 'green'))
+    print(colored('### Warning: Use this MM Fuzzer on your own LLM integrations!', 'red'))
     print(colored('### Do not attempt to harm or scan other LLMs!', 'red'))
     print()
 

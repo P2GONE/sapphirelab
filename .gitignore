@@ -1,4 +1,20 @@
 venv/
+.venv/
 __pycache__/
 *.pyc
 *.pyo
+
+# multimodal fuzzer outputs
+payloads/
+reports/
+success_cases/
+*.log
+
+# legacy LLMfuzzer artifacts (success-time PoCs)
+poc_*.sh
+
+# editor/IDE/local
+.omc/
+.vscode/
+.idea/
+.DS_Store
